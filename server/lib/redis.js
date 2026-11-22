@@ -15,7 +15,6 @@ async function rpc(fn, args) {
     headers: {
       'content-type': 'application/json',
       apikey: SUPA_KEY,
-      authorization: `Bearer ${SUPA_KEY}`,
     },
     body: JSON.stringify(args),
   });
