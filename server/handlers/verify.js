@@ -1,5 +1,5 @@
 // Email verification landing page. The link in the verification email points
-// here (/verify?token=…, rewritten to /api/verify). Marks the account verified
+// here (/verify?token=…, rewritten to the shared API router). Marks the account verified
 // and shows a small confirmation page.
 import { redis } from '../lib/redis.js';
 import { rateLimit } from '../lib/ratelimit.js';

@@ -97,7 +97,7 @@ You can run your own relay so nothing depends on the hosted instance.
 ## Repository layout
 
 ```
-server/    Vercel functions: OAuth + MCP endpoint + relay        (deploy this)
+server/    Vercel API router: OAuth + MCP endpoint + relay       (deploy this)
 agent/     apple-notes-agent — the npm-published Mac CLI          (users npx this)
 kit/       Browser automations: register the dev-mode connector AND
            fill the OpenAI directory submission (see kit/README.md)
