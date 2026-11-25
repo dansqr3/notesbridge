@@ -19,6 +19,13 @@ const __dirname = dirname(__filename);
 const VERSION = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf8')).version;
 
 const DEFAULT_SERVER = 'https://notesbridge-server-prod-gorod.vercel.app';
+const AGENT_RELAY_URL = 'https://zfzemxedbmutowcqhbds.supabase.co/functions/v1/notesbridge-agent-relay';
+const AGENT_RELAY_ROUTES = Object.freeze({
+  '/api/pair/claim': 'pairClaim',
+  '/api/agent/ping': 'agentPing',
+  '/api/agent/poll': 'agentPoll',
+  '/api/agent/result': 'agentResult',
+});
 const CONFIG_PATH = join(homedir(), '.notesbridge-agent.json');
 // Written when `run` gets a 401 so a background (launchd) agent leaves a trail
 // explaining why it keeps exiting; cleared on the next healthy poll.
@@ -74,8 +81,30 @@ function saveConfig(config) {
   chmodSync(CONFIG_PATH, 0o600); // writeFileSync mode is ignored when the file already exists
 }
 
+// The production Vercel Firewall can challenge direct requests from some client
+// networks. Route only the pairing/agent API calls through the fixed Supabase
+// Edge relay; custom/local --server targets continue to be called directly.
+export function agentRelayUrl(server, path) {
+  let origin;
+  try { origin = new URL(server).origin; } catch { return null; }
+  if (origin !== new URL(DEFAULT_SERVER).origin) return null;
+
+  const [pathname, queryString = ''] = String(path).split('?', 2);
+  const route = AGENT_RELAY_ROUTES[pathname];
+  if (!route) return null;
+
+  const url = new URL(AGENT_RELAY_URL);
+  url.searchParams.set('route', route);
+  if (route === 'agentPoll') {
+    const wait = new URLSearchParams(queryString).get('wait');
+    if (wait !== null) url.searchParams.set('wait', wait);
+  }
+  return url.toString();
+}
+
 async function api(server, path, { method = 'GET', token, body, signal } = {}) {
-  return fetch(server.replace(/\/+$/, '') + path, {
+  const relayUrl = agentRelayUrl(server, path);
+  return fetch(relayUrl || server.replace(/\/+$/, '') + path, {
     method,
     headers: {
       ...(token ? { authorization: `Bearer ${token}` } : {}),
@@ -162,6 +191,11 @@ async function cmdPair(code, server) {
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.token) {
+    if (res.status === 403 && res.headers.get('x-vercel-mitigated') === 'challenge') {
+      const requestId = res.headers.get('x-vercel-id');
+      console.error(`Pairing blocked by Vercel DDoS mitigation (HTTP 403)${requestId ? `; request ${requestId}` : ''}. Wait for the cooldown, then retry from a different network.`);
+      process.exit(1);
+    }
     console.error(`Pairing failed (HTTP ${res.status}): ${data.error || 'unknown error'}`);
     process.exit(1);
   }
@@ -318,6 +352,11 @@ async function cmdStatus(serverFlag) {
       process.exit(1);
     }
     if (!res.ok) {
+      if (res.status === 403 && res.headers.get('x-vercel-mitigated') === 'challenge') {
+        const requestId = res.headers.get('x-vercel-id');
+        console.log(`Reachable: NO — Vercel DDoS mitigation challenge (HTTP 403)${requestId ? `; request ${requestId}` : ''}`);
+        process.exit(1);
+      }
       console.log(`Reachable: NO — HTTP ${res.status}`);
       process.exit(1);
     }

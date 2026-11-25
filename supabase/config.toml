@@ -1,0 +1,4 @@
+project_id = "zfzemxedbmutowcqhbds"
+
+[functions.notesbridge-agent-relay]
+verify_jwt = false

@@ -65,15 +65,29 @@ All commands accept `--server <URL>` to point at a different relay
 ## How it works
 
 ```
-ChatGPT / Claude  ──MCP──▶  NotesBridge relay  ◀──poll──  apple-notes-agent (your Mac)
-                                                                   │
-                                                                   ▼
-                                                             Apple Notes (JXA)
+ChatGPT / Claude  ──MCP──▶  NotesBridge on Vercel
+                                  ▲
+                                  │ fixed agent API relay
+                           Supabase Edge Function
+                                  ▲
+                                  │
+                       apple-notes-agent (your Mac)
+                                  │
+                                  ▼
+                           Apple Notes (JXA)
 ```
 
-The agent long-polls the relay for jobs, runs each one against the Notes app using
-Apple's JavaScript automation (JXA / `osascript`), and posts the result back. When
-there's nothing to do it just idles.
+The agent uses the project's Supabase Edge Function for only four fixed transport
+routes (`pair/claim`, `agent/ping`, `agent/poll`, and `agent/result`). The function
+forwards those calls to the production Vercel API; Vercel still validates pairing
+codes, agent JWTs, revocation, and job ownership. It is not an arbitrary URL proxy,
+and no Supabase API key is embedded in the Mac agent. The agent then runs each job
+against Apple Notes using Apple's JavaScript automation (JXA / `osascript`) and
+posts the result back. When there's nothing to do it long-polls for up to 25 seconds.
+
+The Supabase Free quota includes 500,000 Edge Function invocations per month. One
+Mac polling every 25 seconds uses about 104,000 invocations per 30-day month, before
+pairing and status checks.
 
 - Config/token: `~/.notesbridge-agent.json` (permissions `600`).
 - Background logs: `~/Library/Logs/notesbridge-agent.log` and `notesbridge-agent.err.log`.
