@@ -89,3 +89,11 @@ test('OAuth metadata rewrite query selects the original document', async () => {
   assert.equal(res.body.authorization_endpoint, 'https://notesbridge.example/oauth/authorize');
   assert.equal(res.body.token_endpoint, 'https://notesbridge.example/api/oauth/token');
 });
+
+test('onboarding commands use the checked-out CLI and the current relay origin', async () => {
+  const page = await readFile(new URL('./public/index.html', import.meta.url), 'utf8');
+  assert.match(page, /node cli\.mjs pair/);
+  assert.match(page, /--server ' \+ esc\(location\.origin\)/);
+  assert.match(page, /node cli\.mjs install/);
+  assert.doesNotMatch(page, /npx apple-notes-agent/);
+});

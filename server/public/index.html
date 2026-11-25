@@ -241,17 +241,17 @@
       <div class="head"><span class="snum" id="snum1">1</span><h2>Install the Mac agent</h2></div>
       <div class="body">
         <p class="desc">A tiny helper runs on your Mac and answers your ChatGPT requests. Your notes stay on your machine — only the specific results you ask for are relayed.</p>
-        <p class="note">1. Pair your Mac to this account (get your code in Step 2, then run):</p>
+        <p class="note">1. In Terminal, go to the <code>agent</code> folder in your NotesBridge source checkout (clone the GitHub repo linked below if needed), then pair this Mac (get your code in Step 2):</p>
         <div class="cmd">
-          <div class="code" id="cmdPair">npx apple-notes-agent pair <span class="accent">&lt;CODE&gt;</span></div>
+          <div class="code" id="cmdPair">node cli.mjs pair <span class="accent">&lt;CODE&gt;</span> --server <span id="relayOrigin"></span></div>
           <button class="copy" data-target="cmdPair" onclick="copyEl(this)" aria-label="Copy pair command">Copy</button>
         </div>
-        <p class="note">2. Keep it running automatically after every restart:</p>
+        <p class="note">2. Keep it running automatically after every restart (from the same folder):</p>
         <div class="cmd">
-          <div class="code" id="cmdInstall">npx apple-notes-agent install</div>
+          <div class="code" id="cmdInstall">node cli.mjs install</div>
           <button class="copy" data-target="cmdInstall" onclick="copyEl(this)" aria-label="Copy install command">Copy</button>
         </div>
-        <p class="note">Requires <code>Node.js</code>. On first run macOS will ask permission for the agent to control Apple Notes — click Allow.</p>
+        <p class="note">Requires <code>Node.js</code> and a local NotesBridge source checkout. On first run macOS will ask permission for the agent to control Apple Notes — click Allow.</p>
       </div>
     </div>
 
@@ -285,7 +285,7 @@
           <li>Paste this <b>MCP Server URL</b>:</li>
         </ol>
         <div class="cmd">
-          <div class="code" id="mcpUrl">https://notesbridge.vercel.app/mcp</div>
+          <div class="code" id="mcpUrl">https://notesbridge-server-prod-gorod.vercel.app/mcp</div>
           <button class="copy" data-target="mcpUrl" onclick="copyEl(this)" aria-label="Copy MCP server URL">Copy</button>
         </div>
         <ol class="howto" start="5" style="counter-reset:h 4">
@@ -405,6 +405,7 @@
   }
 
   /* ---------- pairing ---------- */
+  $('relayOrigin').textContent = location.origin;
   async function makeCode(){
     const btn = $('genBtn');
     btn.disabled = true; btn.textContent = 'Generating…';
@@ -413,7 +414,7 @@
       pairCodeVal = j.code;
       $('pairCode').textContent = j.code;
       $('pairBox').classList.remove('hidden');
-      $('cmdPair').innerHTML = 'npx apple-notes-agent pair <span class="accent">' + esc(j.code) + '</span>';
+      $('cmdPair').innerHTML = 'node cli.mjs pair <span class="accent">' + esc(j.code) + '</span> --server ' + esc(location.origin);
       btn.textContent = 'Generate a new code';
       done[1] = true;
       render();

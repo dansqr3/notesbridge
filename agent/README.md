@@ -16,12 +16,12 @@ leave your machine except for the specific request you make.
 You need [Node.js 18 or newer](https://nodejs.org). Then:
 
 ```sh
-# 1. On the NotesBridge site, click "Connect my Mac" to get a pairing code.
-# 2. Pair this Mac (replace ABCD-1234 with your code):
-npx apple-notes-agent pair ABCD-1234
+# 1. Clone NotesBridge and open a terminal in its agent/ folder.
+# 2. On the NotesBridge site, generate a pairing code, then pair this Mac:
+node cli.mjs pair ABCD-1234 --server https://YOUR-APP.vercel.app
 
 # 3. Keep it running in the background — starts on login, restarts if it crashes:
-npx apple-notes-agent install
+node cli.mjs install
 ```
 
 That's it. You can close the terminal — the agent keeps running.
@@ -31,13 +31,13 @@ That's it. You can close the terminal — the agent keeps running.
 > If you miss it, enable it later under
 > **System Settings → Privacy & Security → Automation**.
 
-### Want it permanent? Install globally
+### Optional: install the checkout globally
 
-`npx` runs from a cache that npm can prune, which would break the background agent.
-For an always-on setup, install it globally so the path is stable:
+From this `agent/` directory, install the local package globally if you want the
+`apple-notes-agent` command available from any folder:
 
 ```sh
-npm install -g apple-notes-agent
+npm install -g .
 apple-notes-agent pair ABCD-1234
 apple-notes-agent install
 ```
@@ -58,7 +58,7 @@ apple-notes-agent install
 | `apple-notes-agent --help` | Show usage. |
 
 All commands accept `--server <URL>` to point at a different relay
-(default: `https://notesbridge.vercel.app`).
+(default: `https://notesbridge-server-prod-gorod.vercel.app`).
 
 ---
 
