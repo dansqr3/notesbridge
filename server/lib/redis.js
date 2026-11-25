@@ -9,14 +9,21 @@ const SUPA_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 export const redisConfigured = !!(SUPA_URL && SUPA_KEY);
 
 async function rpc(fn, args) {
+  const headers = {
+    'content-type': 'application/json',
+    apikey: SUPA_KEY,
+  };
+  // Supabase's new sb_secret_ keys are API keys, not bearer JWTs. Legacy
+  // service_role JWT keys still need Authorization for PostgREST to assume
+  // the service_role database role.
+  if (!SUPA_KEY.startsWith('sb_secret_')) {
+    headers.authorization = `Bearer ${SUPA_KEY}`;
+  }
+
   const r = await fetch(`${SUPA_URL}/rest/v1/rpc/${fn}`, {
     method: 'POST',
     signal: AbortSignal.timeout(10_000),
-    headers: {
-      'content-type': 'application/json',
-      apikey: SUPA_KEY,
-      authorization: `Bearer ${SUPA_KEY}`,
-    },
+    headers,
     body: JSON.stringify(args),
   });
   if (!r.ok) throw new Error(`storage ${fn} failed: ${r.status} ${await r.text()}`);
