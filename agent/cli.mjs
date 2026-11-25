@@ -18,7 +18,7 @@ const __dirname = dirname(__filename);
 // package.json is always shipped by npm, so it is a safe single source for the version.
 const VERSION = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf8')).version;
 
-const DEFAULT_SERVER = 'https://notesbridge.vercel.app';
+const DEFAULT_SERVER = 'https://notesbridge-server-prod-gorod.vercel.app';
 const CONFIG_PATH = join(homedir(), '.notesbridge-agent.json');
 // Written when `run` gets a 401 so a background (launchd) agent leaves a trail
 // explaining why it keeps exiting; cleared on the next healthy poll.
@@ -169,8 +169,8 @@ async function cmdPair(code, server) {
   clearUnauthorizedMarker();
   console.log(`Paired with ${server}`);
   console.log(`Token saved to ${CONFIG_PATH} (mode 600)`);
-  console.log('Start the agent with:  apple-notes-agent run');
-  console.log('Keep it running on login with:  apple-notes-agent install');
+  console.log('Start the agent with:  node cli.mjs run');
+  console.log('Keep it running on login with:  node cli.mjs install');
 }
 
 function clearUnauthorizedMarker() {
@@ -188,14 +188,14 @@ async function handleRunUnauthorized(server) {
   logErr('This Mac is no longer paired, so the background agent cannot work.');
   logErr('To fix it:');
   logErr('  1. Open the NotesBridge site and generate a new pairing code.');
-  logErr('  2. Run: apple-notes-agent pair <CODE>');
-  logErr('  3. Run: apple-notes-agent install   (restarts the background agent)');
+  logErr(`  2. Run: node "${__filename}" pair <CODE> --server ${server}`);
+  logErr(`  3. Run: node "${__filename}" install   (restarts the background agent)`);
   logErr('==================================================================');
   try {
     writeFileSync(
       UNAUTHORIZED_MARKER,
       `${new Date().toISOString()} — 401 from ${server}\n` +
-        'This Mac is unpaired. Re-pair with: apple-notes-agent pair <CODE>\n',
+        `This Mac is unpaired. Re-pair with: node "${__filename}" pair <CODE> --server ${server}\n`,
     );
   } catch {}
   await sleep(5000); // short pause so launchd does not restart in a tight loop
@@ -227,7 +227,7 @@ async function cmdRun(serverFlag) {
   const config = loadConfig();
   if (!config?.token) {
     console.error(`Not paired — no token in ${CONFIG_PATH}.`);
-    console.error('Run: apple-notes-agent pair <CODE>');
+    console.error(`Run: node "${__filename}" pair <CODE> --server ${serverFlag || DEFAULT_SERVER}`);
     process.exit(1);
   }
   const server = serverFlag || config.server || DEFAULT_SERVER;
@@ -301,7 +301,7 @@ async function cmdStatus(serverFlag) {
   const config = loadConfig();
   if (!config?.token) {
     console.log(`Not paired — no token in ${CONFIG_PATH}.`);
-    console.log('Run: apple-notes-agent pair <CODE>');
+    console.log(`Run: node "${__filename}" pair <CODE> --server ${serverFlag || DEFAULT_SERVER}`);
     process.exit(1);
   }
   const server = serverFlag || config.server || DEFAULT_SERVER;
@@ -314,7 +314,7 @@ async function cmdStatus(serverFlag) {
     // serves) or steal an in-flight job from a running `run` loop.
     const res = await api(server, '/api/agent/ping', { token: config.token });
     if (res.status === 401) {
-      console.log('Paired:    NO — token rejected. Re-pair with: apple-notes-agent pair <CODE>');
+      console.log(`Paired:    NO — token rejected. Re-pair with: node "${__filename}" pair <CODE> --server ${server}`);
       process.exit(1);
     }
     if (!res.ok) {
@@ -323,8 +323,8 @@ async function cmdStatus(serverFlag) {
     }
     console.log('Reachable: yes');
     console.log('Paired:    yes (token accepted)');
-    console.log(`Auto-start: ${existsSync(PLIST_PATH) ? `installed (${PLIST_PATH})` : 'not installed — run: apple-notes-agent install'}`);
-    console.log('Note:      this check does not mark the agent online or consume jobs — run `apple-notes-agent run` to serve requests.');
+    console.log(`Auto-start: ${existsSync(PLIST_PATH) ? `installed (${PLIST_PATH})` : `not installed — run: node "${__filename}" install`}`);
+    console.log(`Note:      this check does not mark the agent online or consume jobs — run \`node "${__filename}" run\` to serve requests.`);
   } catch (e) {
     console.log(`Reachable: NO — ${e.message}`);
     process.exit(1);
@@ -334,15 +334,15 @@ async function cmdStatus(serverFlag) {
 async function cmdInstall() {
   if (process.platform !== 'darwin') {
     console.error('`install` is only supported on macOS (LaunchAgents are a macOS feature).');
-    console.error('On this platform, run the agent yourself with: apple-notes-agent run');
+    console.error(`On this platform, run the agent yourself with: node "${__filename}" run`);
     process.exit(1);
   }
   const config = loadConfig();
   if (!config?.token) {
     console.error(`Not paired yet — no token in ${CONFIG_PATH}.`);
     console.error('Pair first, then install:');
-    console.error('  apple-notes-agent pair <CODE>');
-    console.error('  apple-notes-agent install');
+    console.error(`  node "${__filename}" pair <CODE> --server ${DEFAULT_SERVER}`);
+    console.error(`  node "${__filename}" install`);
     process.exit(1);
   }
 
@@ -476,8 +476,8 @@ Options:
   -v, --version Show the version.
 
 Typical setup:
-  npx apple-notes-agent pair ABCD-1234
-  npx apple-notes-agent install`);
+  node cli.mjs pair ABCD-1234 --server ${DEFAULT_SERVER}
+  node cli.mjs install`);
 }
 
 async function main() {

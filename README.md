@@ -5,7 +5,6 @@
 **Use your Apple Notes from ChatGPT — search, read, and write, powered by your own Mac.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-f5b942.svg)](./LICENSE)
-[![npm](https://img.shields.io/npm/v/apple-notes-agent.svg?color=4ade80&label=apple-notes-agent)](https://www.npmjs.com/package/apple-notes-agent)
 
 </div>
 
@@ -22,29 +21,31 @@ The agent accesses Apple Notes on your Mac. The relay stores account records and
 
 ## For users — 3 steps
 
-**1. Create your account** at **[notesbridge.vercel.app](https://notesbridge.vercel.app)** and generate a pairing code.
+**1. Create your account** at **[NotesBridge](https://notesbridge-server-prod-gorod.vercel.app)** and generate a pairing code.
 
-**2. Install the Mac agent** (needs [Node 18+](https://nodejs.org)):
+**2. Run the Mac agent from a source checkout** (needs [Node 18+](https://nodejs.org)):
 
 ```bash
-npx apple-notes-agent pair <YOUR-CODE>   # link this Mac to your account
-npx apple-notes-agent install            # keep it running on every restart
+git clone https://github.com/IsaiahDupree/notesbridge.git
+cd notesbridge/agent
+node cli.mjs pair <YOUR-CODE> --server https://notesbridge-server-prod-gorod.vercel.app
+node cli.mjs install                       # keep it running on every restart
 ```
 
 The first time it touches Notes, macOS asks **"Terminal wants to control Notes"** — click **OK** (one time).
 
-**3. Connect ChatGPT:** Settings → **Plugins** → turn on **Developer mode** (Security & login) → **Create** a custom plugin → paste the MCP Server URL **`https://notesbridge.vercel.app/mcp`** → Authentication **OAuth** → sign in & **Allow**.
+**3. Connect ChatGPT:** Settings → **Plugins** → turn on **Developer mode** (Security & login) → **Create** a custom plugin → paste the MCP Server URL **`https://notesbridge-server-prod-gorod.vercel.app/mcp`** → Authentication **OAuth** → sign in & **Allow**.
 
 That's it. In a new chat: *"Search my Apple Notes for the Q3 planning note"* or *"Create a note titled Groceries with milk, eggs, coffee."*
 
-> Your Mac must be awake with the agent running. `npx apple-notes-agent install` makes it start automatically at login and restart if it ever crashes.
+> Your Mac must be awake with the agent running. `node cli.mjs install` makes it start automatically at login and restart if it ever crashes.
 
 ### Managing the agent
 
 ```bash
-npx apple-notes-agent status      # is it paired & reachable?
-npx apple-notes-agent logs        # recent activity
-npx apple-notes-agent uninstall   # stop auto-start
+node cli.mjs status      # is it paired & reachable?
+node cli.mjs logs        # recent activity
+node cli.mjs uninstall   # stop auto-start
 ```
 
 From this source checkout, for a private local text index (Node.js 22.13+), run
@@ -84,7 +85,7 @@ You can run your own relay so nothing depends on the hosted instance.
    - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — your project + service-role key
    - `JWT_SECRET` — `openssl rand -hex 32`
 4. **Verify:** `curl https://YOUR-APP.vercel.app/api/health` → `redisConfigured`, `redisOk`, `jwtSecretSet` all `true`.
-5. Point the agent at it: `npx apple-notes-agent pair <CODE> --server https://YOUR-APP.vercel.app`.
+5. In the `agent/` directory of the source checkout, point the agent at it: `node cli.mjs pair <CODE> --server https://YOUR-APP.vercel.app`.
 
 ---
 
@@ -98,7 +99,7 @@ You can run your own relay so nothing depends on the hosted instance.
 
 ```
 server/    Vercel API router: OAuth + MCP endpoint + relay       (deploy this)
-agent/     apple-notes-agent — the npm-published Mac CLI          (users npx this)
+agent/     apple-notes-agent — the Mac CLI source
 kit/       Browser automations: register the dev-mode connector AND
            fill the OpenAI directory submission (see kit/README.md)
 supabase/  schema.sql for self-hosting the storage
