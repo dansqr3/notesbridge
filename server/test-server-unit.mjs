@@ -42,6 +42,34 @@ test('Supabase RPC sends secret API keys as apikey, not as bearer JWTs', async (
   }
 });
 
+test('Supabase RPC sends legacy service_role JWTs as both apikey and bearer token', async () => {
+  const oldUrl = process.env.SUPABASE_URL;
+  const oldKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const oldFetch = globalThis.fetch;
+  const legacyKey = 'eyJhbGciOiJIUzI1NiJ9.legacy-service-role.signature';
+  let request;
+  process.env.SUPABASE_URL = 'https://project.supabase.co';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = legacyKey;
+  globalThis.fetch = async (url, options) => {
+    request = { url, options };
+    return new Response('"stored-value"', { status: 200 });
+  };
+
+  try {
+    const { redis: supabaseRedis } = await import(`./lib/redis.js?legacy-key-test=${Date.now()}`);
+    assert.equal(await supabaseRedis.get('header-test'), 'stored-value');
+    const headers = new Headers(request.options.headers);
+    assert.equal(headers.get('apikey'), legacyKey);
+    assert.equal(headers.get('authorization'), `Bearer ${legacyKey}`);
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (oldUrl === undefined) delete process.env.SUPABASE_URL;
+    else process.env.SUPABASE_URL = oldUrl;
+    if (oldKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    else process.env.SUPABASE_SERVICE_ROLE_KEY = oldKey;
+  }
+});
+
 // ---- auth: JWT ----
 test('JWT round-trips and carries claims', () => {
   const t = signJwt({ kind: 'mcp', sub: 'usr_1' }, 60);
