@@ -26,12 +26,12 @@ alter table notesbridge_kv enable row level security;
 alter table notesbridge_list enable row level security;
 
 create or replace function nb_get(p_k text) returns text
-language sql as $$
+language sql security definer set search_path = pg_catalog, public, pg_temp as $$
   select v from notesbridge_kv where k = p_k and (expires_at is null or expires_at > now());
 $$;
 
 create or replace function nb_set(p_k text, p_v text, p_ttl_sec int default null) returns void
-language plpgsql as $$
+language plpgsql security definer set search_path = pg_catalog, public, pg_temp as $$
 begin
   delete from notesbridge_kv where expires_at is not null and expires_at <= now();
   insert into notesbridge_kv (k, v, expires_at)
@@ -40,14 +40,14 @@ begin
 end $$;
 
 create or replace function nb_del(p_k text) returns void
-language plpgsql as $$
+language plpgsql security definer set search_path = pg_catalog, public, pg_temp as $$
 begin
   delete from notesbridge_kv where k = p_k;
   delete from notesbridge_list where k = p_k;
 end $$;
 
 create or replace function nb_lpush(p_k text, p_v text) returns int
-language plpgsql as $$
+language plpgsql security definer set search_path = pg_catalog, public, pg_temp as $$
 declare cnt int;
 begin
   delete from notesbridge_list where expires_at is not null and expires_at <= now();
@@ -58,7 +58,7 @@ end $$;
 
 -- lpush + rpop = FIFO: rpop returns the earliest-pushed surviving item.
 create or replace function nb_rpop(p_k text) returns text
-language plpgsql as $$
+language plpgsql security definer set search_path = pg_catalog, public, pg_temp as $$
 declare out_v text;
 begin
   delete from notesbridge_list
@@ -78,7 +78,7 @@ end $$;
 -- bucket can never persist without an expiry. Single upsert = atomic under
 -- concurrency; increments within a window keep the original expiry.
 create or replace function nb_incr(p_k text, p_ttl_sec int default null) returns int
-language plpgsql as $$
+language plpgsql security definer set search_path = pg_catalog, public, pg_temp as $$
 declare out_v int;
 begin
   insert into notesbridge_kv (k, v, expires_at)
@@ -94,7 +94,7 @@ begin
 end $$;
 
 create or replace function nb_expire(p_k text, p_ttl_sec int) returns int
-language plpgsql as $$
+language plpgsql security definer set search_path = pg_catalog, public, pg_temp as $$
 declare n1 int := 0; n2 int := 0;
 begin
   update notesbridge_kv set expires_at = now() + make_interval(secs => p_ttl_sec) where k = p_k;
@@ -103,3 +103,14 @@ begin
   get diagnostics n2 = row_count;
   return case when n1 + n2 > 0 then 1 else 0 end;
 end $$;
+
+-- Keep the storage RPC surface private to the NotesBridge server. The tables
+-- remain protected by RLS and service_role is the only role granted access.
+grant select, insert, update, delete on table notesbridge_kv, notesbridge_list to service_role;
+grant usage, select on sequence notesbridge_list_id_seq to service_role;
+revoke execute on function nb_get(text), nb_set(text, text, int), nb_del(text),
+  nb_lpush(text, text), nb_rpop(text), nb_incr(text, int), nb_expire(text, int)
+  from public, anon, authenticated;
+grant execute on function nb_get(text), nb_set(text, text, int), nb_del(text),
+  nb_lpush(text, text), nb_rpop(text), nb_incr(text, int), nb_expire(text, int)
+  to service_role;
