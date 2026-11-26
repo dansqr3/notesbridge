@@ -51,3 +51,20 @@ CSV imports are limited to 1.5 MB per request. Imports merge by default. Setting
 
     npm install
     npm test
+
+## Notion mirror
+
+The connected Notion workspace already has a `📕 Reading list` data source:
+`collection://3ac49a90-ae63-4611-8e4f-686224f482bb`.
+
+It contains `Film` and `TV Series` types and remains the user's main list. The data source was extended additively with:
+- `IMDb ID` (stable matching key)
+- `IMDb Rating` and `IMDb Votes` (public title metrics carried by owner export)
+- `IMDb User Rating` (the owner's 1–10 score)
+- `IMDb Genres`
+- `IMDb Watchlist`
+- `IMDb Synced At`
+
+The sync is upserted by IMDb ID. Preserve manually maintained `Status`, `Score`, `Completed`, and other existing properties. Do not translate the 1–10 rating into the existing 5-star `Score` unless the user explicitly asks for that; the full score lives in `IMDb User Rating`.
+
+ChatGPT can orchestrate a controlled sync using the IMDb MCP read tools and the connected Notion integration. This avoids a second Notion API token. A fully unattended Vercel-to-Notion scheduled sync would require a separate Notion integration token with access to this data source, stored only as an encrypted server environment variable; it is not configured yet.
