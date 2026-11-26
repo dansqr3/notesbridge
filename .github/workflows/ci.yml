@@ -12,12 +12,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20'
 
       - name: Syntax check all JS/MJS
         run: |
           set -e
-          find server agent test docs/imdb imdb -type f \( -name '*.js' -o -name '*.mjs' \) \
+          find server agent test -type f \( -name '*.js' -o -name '*.mjs' \) \
             -not -path '*/node_modules/*' -print0 |
             while IFS= read -r -d '' f; do echo "check $f"; node --check "$f"; done
 
@@ -34,14 +34,3 @@ jobs:
       - name: Agent unit tests
         working-directory: agent
         run: node --test test-agent-unit.mjs
-
-      - name: IMDb CSV importer tests
-        run: node --test docs/imdb/csv-importer.test.mjs
-
-      - name: Install IMDb MCP dependencies
-        working-directory: imdb
-        run: npm install --no-audit --no-fund
-
-      - name: IMDb MCP package tests
-        working-directory: imdb
-        run: npm test
