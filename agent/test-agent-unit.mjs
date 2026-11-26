@@ -4,7 +4,29 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { escapeHtml, renderBodyHtml, buildJxaArgs, cleanOsascriptError, runTool } from './notes-jxa.mjs';
-import { buildPlist, xmlEscape } from './cli.mjs';
+import { agentRelayUrl, buildPlist, xmlEscape } from './cli.mjs';
+
+const PRODUCTION_SERVER = 'https://notesbridge-server-prod-gorod.vercel.app';
+const SUPABASE_AGENT_RELAY = 'https://zfzemxedbmutowcqhbds.supabase.co/functions/v1/notesbridge-agent-relay';
+
+test('production agent routes use the fixed Supabase relay', () => {
+  assert.equal(agentRelayUrl(PRODUCTION_SERVER, '/api/pair/claim'), `${SUPABASE_AGENT_RELAY}?route=pairClaim`);
+  assert.equal(agentRelayUrl(PRODUCTION_SERVER, '/api/agent/ping'), `${SUPABASE_AGENT_RELAY}?route=agentPing`);
+  assert.equal(agentRelayUrl(PRODUCTION_SERVER, '/api/agent/result'), `${SUPABASE_AGENT_RELAY}?route=agentResult`);
+});
+
+test('agent poll relay preserves only the bounded wait query value', () => {
+  assert.equal(
+    agentRelayUrl(PRODUCTION_SERVER, '/api/agent/poll?wait=25'),
+    `${SUPABASE_AGENT_RELAY}?route=agentPoll&wait=25`,
+  );
+});
+
+test('custom server targets and unrelated production APIs bypass the agent relay', () => {
+  assert.equal(agentRelayUrl('https://preview.example.test', '/api/agent/ping'), null);
+  assert.equal(agentRelayUrl(PRODUCTION_SERVER, '/api/login'), null);
+  assert.equal(agentRelayUrl(PRODUCTION_SERVER, '/api/agent/poll?wait=25&target=https://evil.test'), `${SUPABASE_AGENT_RELAY}?route=agentPoll&wait=25`);
+});
 
 test('escapeHtml escapes all five entities', () => {
   assert.equal(escapeHtml(`<b>"a" & 'b'</b>`), '&lt;b&gt;&quot;a&quot; &amp; &#39;b&#39;&lt;/b&gt;');
