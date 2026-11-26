@@ -197,7 +197,7 @@ export async function importList(client, csvText, options = {}) {
   const listName = options.listName || (kind === 'watchlist' ? 'IMDb Watchlist' : listId);
   const run = await client.query(
     'insert into imdb_private.import_runs(source, filename, rows_seen, rows_imported, rows_skipped, status) ' +
-    'values ($1, $2, $3, $4, $5, \\'processing\\') returning id',
+    "values ($1, $2, $3, $4, $5, 'processing') returning id",
     [kind, options.filename ?? (kind + '.csv'), parsed.summary.seen, parsed.summary.imported, parsed.summary.skipped]
   );
   await upsertTitles(client, parsed.accepted.map(item => item.title));
