@@ -17,7 +17,7 @@ jobs:
       - name: Syntax check all JS/MJS
         run: |
           set -e
-          find server agent test -type f \( -name '*.js' -o -name '*.mjs' \) \
+          find server agent test docs/imdb -type f \( -name '*.js' -o -name '*.mjs' \) \
             -not -path '*/node_modules/*' -print0 |
             while IFS= read -r -d '' f; do echo "check $f"; node --check "$f"; done
 
@@ -34,3 +34,6 @@ jobs:
       - name: Agent unit tests
         working-directory: agent
         run: node --test test-agent-unit.mjs
+
+      - name: IMDb CSV importer tests
+        run: node --test docs/imdb/csv-importer.test.mjs
