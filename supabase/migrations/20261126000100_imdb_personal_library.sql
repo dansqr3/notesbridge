@@ -55,7 +55,6 @@ create table if not exists imdb_private.import_runs (
   imported_at timestamptz not null default now()
 );
 
-create index if not exists imdb_titles_title_trgm_idx on imdb_private.titles using gin (title gin_trgm_ops);
 create index if not exists imdb_titles_genres_idx on imdb_private.titles using gin (genres);
 create index if not exists imdb_watchlist_position_idx on imdb_private.watchlist_items(position);
 create index if not exists imdb_custom_lists_name_idx on imdb_private.custom_lists(list_name);
